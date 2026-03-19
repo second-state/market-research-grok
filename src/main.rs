@@ -119,7 +119,7 @@ struct Synthesis {
 // ── Grok client ─────────────────────────────────────────────────────────────
 
 const GROK_URL: &str = "https://api.x.ai/v1/responses";
-const MODEL: &str = "grok-3";
+const MODEL: &str = "grok-4-0709";
 
 struct Grok {
     client: Client,
