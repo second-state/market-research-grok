@@ -5,14 +5,14 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  GROK_API_KEY: ${{ secrets.GROK_API_KEY }}
 
 jobs:
   research:
     name: Research (no media)
     runs-on: ubuntu-latest
-    if: env.GROK_API_KEY != ''
     timeout-minutes: 10
+    env:
+      GROK_API_KEY: ${{ secrets.GROK_API_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -22,8 +22,9 @@ jobs:
   media:
     name: Media Generation
     runs-on: ubuntu-latest
-    if: env.GROK_API_KEY != ''
     timeout-minutes: 20
+    env:
+      GROK_API_KEY: ${{ secrets.GROK_API_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
