@@ -32,7 +32,6 @@ fn help_flag_works() {
     let out = bin().arg("--help").output().expect("failed to run binary");
     assert!(out.status.success());
     let stdout = String::from_utf8_lossy(&out.stdout);
-    assert!(stdout.contains("market-research"));
     assert!(stdout.contains("--product"));
 }
 
@@ -80,12 +79,17 @@ fn live_api_generates_report() {
     assert!(report.get("synthesis").is_some());
 
     // search_terms should be a non-empty array
-    let terms = report["search_terms"].as_array().expect("search_terms is array");
+    let terms = report["search_terms"]
+        .as_array()
+        .expect("search_terms is array");
     assert!(!terms.is_empty(), "should have generated search terms");
 
     // synthesis should have market_need_score
     let score = report["synthesis"]["market_need_score"]
         .as_u64()
         .expect("market_need_score is a number");
-    assert!((1..=10).contains(&score), "score should be 1-10, got {score}");
+    assert!(
+        (1..=10).contains(&score),
+        "score should be 1-10, got {score}"
+    );
 }

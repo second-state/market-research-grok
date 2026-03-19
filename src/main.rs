@@ -8,7 +8,10 @@ use std::env;
 // ── CLI ──────────────────────────────────────────────────────────────────────
 
 #[derive(Parser)]
-#[command(name = "market-research", about = "AI-powered market research via Grok + X/web search")]
+#[command(
+    name = "market-research",
+    about = "AI-powered market research via Grok + X/web search"
+)]
 struct Cli {
     /// Product description: features, user profiles, price points, use cases
     #[arg(short, long)]
@@ -36,7 +39,7 @@ struct ChatRequest {
 
 #[derive(Serialize)]
 struct SearchParameters {
-    mode: String,       // "auto" | "on" | "off"
+    mode: String, // "auto" | "on" | "off"
     sources: Vec<Source>,
     return_citations: bool,
 }
@@ -89,7 +92,7 @@ struct Finding {
 
 #[derive(Serialize, Deserialize)]
 struct Synthesis {
-    market_need_score: u8,          // 1-10
+    market_need_score: u8, // 1-10
     market_need_description: String,
     pain_points_solved: Vec<String>,
     pain_points_missed: Vec<String>,
@@ -113,8 +116,7 @@ struct Grok {
 
 impl Grok {
     fn new() -> Result<Self> {
-        let api_key = env::var("GROK_API_KEY")
-            .context("GROK_API_KEY env var not set")?;
+        let api_key = env::var("GROK_API_KEY").context("GROK_API_KEY env var not set")?;
         Ok(Self {
             client: Client::new(),
             api_key,
@@ -128,16 +130,23 @@ impl Grok {
             search_parameters: SearchParameters {
                 mode: "on".to_string(),
                 sources: vec![
-                    Source { kind: "x".to_string() },
-                    Source { kind: "web".to_string() },
-                    Source { kind: "news".to_string() },
+                    Source {
+                        kind: "x".to_string(),
+                    },
+                    Source {
+                        kind: "web".to_string(),
+                    },
+                    Source {
+                        kind: "news".to_string(),
+                    },
                 ],
                 return_citations: true,
             },
             temperature: temp,
         };
 
-        let resp = self.client
+        let resp = self
+            .client
             .post(GROK_URL)
             .bearer_auth(&self.api_key)
             .json(&req)
@@ -191,8 +200,8 @@ Return ONLY a JSON array of strings. No markdown, no explanation. Example:
 
     // Extract JSON array from response (handle markdown wrapping)
     let json_str = extract_json_array(&raw)?;
-    let terms: Vec<String> = serde_json::from_str(&json_str)
-        .context("Failed to parse search terms JSON")?;
+    let terms: Vec<String> =
+        serde_json::from_str(&json_str).context("Failed to parse search terms JSON")?;
 
     Ok(terms)
 }
@@ -291,8 +300,8 @@ Return ONLY valid JSON (no markdown). Schema:
 
     let raw = grok.chat(messages, Some(0.3)).await?;
     let json_str = extract_json_object(&raw)?;
-    let synthesis: Synthesis = serde_json::from_str(&json_str)
-        .context("Failed to parse synthesis JSON")?;
+    let synthesis: Synthesis =
+        serde_json::from_str(&json_str).context("Failed to parse synthesis JSON")?;
 
     Ok(synthesis)
 }
@@ -306,7 +315,10 @@ fn extract_json_array(raw: &str) -> Result<String> {
             return Ok(raw[start..=end].to_string());
         }
     }
-    anyhow::bail!("No JSON array found in response: {}", &raw[..raw.len().min(200)])
+    anyhow::bail!(
+        "No JSON array found in response: {}",
+        &raw[..raw.len().min(200)]
+    )
 }
 
 fn extract_json_object(raw: &str) -> Result<String> {
@@ -315,7 +327,10 @@ fn extract_json_object(raw: &str) -> Result<String> {
             return Ok(raw[start..=end].to_string());
         }
     }
-    anyhow::bail!("No JSON object found in response: {}", &raw[..raw.len().min(200)])
+    anyhow::bail!(
+        "No JSON object found in response: {}",
+        &raw[..raw.len().min(200)]
+    )
 }
 
 // ── Main ────────────────────────────────────────────────────────────────────
@@ -345,7 +360,10 @@ async fn main() -> Result<()> {
 
     let mut findings = Vec::new();
     for term in &terms {
-        pb.set_message(format!("\"{}\"", if term.len() > 30 { &term[..30] } else { term }));
+        pb.set_message(format!(
+            "\"{}\"",
+            if term.len() > 30 { &term[..30] } else { term }
+        ));
         match research_term(&grok, term, &cli.product).await {
             Ok(finding) => findings.push(finding),
             Err(e) => eprintln!("\n   ⚠️  Skipping \"{term}\": {e}"),
