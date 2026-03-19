@@ -8,17 +8,42 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  GROK_API_KEY: ${{ secrets.GROK_API_KEY }}
 
 jobs:
-  check:
-    name: Check & Test
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt -- --check
+      - run: cargo clippy -- -D warnings
+
+  build:
+    name: Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: cargo check --release
-      - run: cargo test --release
-      - run: cargo clippy -- -D warnings
-      - run: cargo fmt -- --check
+      - run: cargo build --release
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs: build
+    env:
+      GROK_API_KEY: ${{ secrets.GROK_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Unit tests
+        run: cargo test --release -- --skip live_api
+      - name: Integration test (live API)
+        if: env.GROK_API_KEY != ''
+        timeout-minutes: 10
+        run: cargo test --release -- live_api --nocapture
