@@ -44,6 +44,6 @@ jobs:
       - name: Unit tests
         run: cargo test --release -- --skip live_api
       - name: Integration test (live API)
-        if: env.GROK_API_KEY != ''
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && env.GROK_API_KEY != ''
         timeout-minutes: 10
         run: cargo test --release -- live_api --nocapture
