@@ -42,22 +42,11 @@ jobs:
       - run: cargo build --release
 
   test:
-    name: Test
+    name: Unit Tests
     runs-on: ubuntu-latest
     needs: build
-    env:
-      GROK_API_KEY: ${{ secrets.GROK_API_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - name: Unit tests
-        run: cargo test --release -- --skip live_api
-      - name: Integration test (research, no media)
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && env.GROK_API_KEY != ''
-        timeout-minutes: 10
-        run: cargo test --release -- live_api_generates_report --nocapture
-      - name: Integration test (media generation)
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && env.GROK_API_KEY != ''
-        timeout-minutes: 20
-        run: cargo test --release -- live_api_generates_media --nocapture
+      - run: cargo test --release -- --skip live_api

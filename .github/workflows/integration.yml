@@ -1,0 +1,31 @@
+name: Integration Tests
+
+on:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  GROK_API_KEY: ${{ secrets.GROK_API_KEY }}
+
+jobs:
+  research:
+    name: Research (no media)
+    runs-on: ubuntu-latest
+    if: env.GROK_API_KEY != ''
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --release -- live_api_generates_report --nocapture
+
+  media:
+    name: Media Generation
+    runs-on: ubuntu-latest
+    if: env.GROK_API_KEY != ''
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --release -- live_api_generates_media --nocapture
