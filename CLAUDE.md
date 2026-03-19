@@ -100,11 +100,14 @@ git push --tags
 ## API Integration
 
 ### Grok API
-- **Endpoint:** `https://api.x.ai/v1/chat/completions`
+- **Endpoint:** `https://api.x.ai/v1/responses` (Responses API — NOT the old `/v1/chat/completions`)
 - **Model:** `grok-3` (hardcoded as `MODEL` constant)
 - **Auth:** Bearer token from `GROK_API_KEY` env var
-- **Search:** Always enabled — `mode: "on"`, sources: `["x", "web", "news"]`
-- **Citations:** Enabled
+- **Search:** Always enabled via tools: `[{"type": "web_search"}, {"type": "x_search"}]`
+- **Request format:** Uses `input` (not `messages`) and `tools` (not `search_parameters`)
+
+> ⚠️ **The old `/v1/chat/completions` with `search_parameters` was deprecated (410 Gone) in March 2026.**
+> The current code uses the Responses API with Agent Tools. See https://docs.x.ai/developers/tools/overview
 
 ### Prompt Design
 

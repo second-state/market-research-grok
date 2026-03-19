@@ -195,11 +195,10 @@ src/main.rs          Single-file Rust binary (~300 lines)
 
 ## API Details
 
-All calls go to `https://api.x.ai/v1/chat/completions` with:
+All calls go to `https://api.x.ai/v1/responses` (the Responses API) with:
 
 - **Model:** `grok-3`
-- **Search:** Always on — `mode: "on"` with sources `["x", "web", "news"]`
-- **Citations:** Enabled (`return_citations: true`)
+- **Tools:** `[{"type": "web_search"}, {"type": "x_search"}]` — live search on every call
 - **Temperature:** 0.7 for term generation (creative), 0.3 for research and synthesis (precise)
 
 ## Cost Estimation

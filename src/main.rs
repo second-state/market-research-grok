@@ -26,49 +26,61 @@ struct Cli {
     terms: u8,
 }
 
-// ── Grok API types ──────────────────────────────────────────────────────────
+// ── Grok Responses API types ────────────────────────────────────────────────
 
 #[derive(Serialize)]
-struct ChatRequest {
+struct ResponsesRequest {
     model: String,
-    messages: Vec<Message>,
-    search_parameters: SearchParameters,
+    input: Vec<InputMessage>,
+    tools: Vec<Tool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     temperature: Option<f32>,
 }
 
-#[derive(Serialize)]
-struct SearchParameters {
-    mode: String, // "auto" | "on" | "off"
-    sources: Vec<Source>,
-    return_citations: bool,
-}
-
-#[derive(Serialize)]
-struct Source {
-    #[serde(rename = "type")]
-    kind: String, // "x" | "web" | "news"
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-struct Message {
+#[derive(Serialize, Clone)]
+struct InputMessage {
     role: String,
     content: String,
 }
 
+#[derive(Serialize)]
+struct Tool {
+    #[serde(rename = "type")]
+    kind: String,
+}
+
+/// The Responses API returns a top-level object with an `output` array.
+/// Each output item can be a message or tool-use result.
+/// We extract the text content from the message items.
 #[derive(Deserialize)]
-struct ChatResponse {
-    choices: Vec<Choice>,
+struct ResponsesResponse {
+    #[serde(default)]
+    output: Vec<OutputItem>,
+    #[serde(default)]
+    error: Option<ApiError>,
 }
 
 #[derive(Deserialize)]
-struct Choice {
-    message: ResponseMessage,
+struct ApiError {
+    message: Option<String>,
 }
 
 #[derive(Deserialize)]
-struct ResponseMessage {
-    content: String,
+struct OutputItem {
+    #[serde(rename = "type")]
+    _kind: Option<String>,
+    #[serde(default)]
+    content: Option<Vec<ContentBlock>>,
+    #[serde(default)]
+    text: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct ContentBlock {
+    #[serde(rename = "type")]
+    kind: Option<String>,
+    #[serde(default)]
+    text: Option<String>,
 }
 
 // ── Output schema ───────────────────────────────────────────────────────────
@@ -106,7 +118,7 @@ struct Synthesis {
 
 // ── Grok client ─────────────────────────────────────────────────────────────
 
-const GROK_URL: &str = "https://api.x.ai/v1/chat/completions";
+const GROK_URL: &str = "https://api.x.ai/v1/responses";
 const MODEL: &str = "grok-3";
 
 struct Grok {
@@ -123,25 +135,18 @@ impl Grok {
         })
     }
 
-    async fn chat(&self, messages: Vec<Message>, temp: Option<f32>) -> Result<String> {
-        let req = ChatRequest {
+    async fn chat(&self, messages: Vec<InputMessage>, temp: Option<f32>) -> Result<String> {
+        let req = ResponsesRequest {
             model: MODEL.to_string(),
-            messages,
-            search_parameters: SearchParameters {
-                mode: "on".to_string(),
-                sources: vec![
-                    Source {
-                        kind: "x".to_string(),
-                    },
-                    Source {
-                        kind: "web".to_string(),
-                    },
-                    Source {
-                        kind: "news".to_string(),
-                    },
-                ],
-                return_citations: true,
-            },
+            input: messages,
+            tools: vec![
+                Tool {
+                    kind: "web_search".to_string(),
+                },
+                Tool {
+                    kind: "x_search".to_string(),
+                },
+            ],
             temperature: temp,
         };
 
@@ -160,12 +165,47 @@ impl Grok {
             anyhow::bail!("Grok API error {status}: {body}");
         }
 
-        let resp: ChatResponse = resp.json().await.context("Failed to parse Grok response")?;
-        resp.choices
-            .first()
-            .map(|c| c.message.content.clone())
-            .context("Empty response from Grok")
+        let resp: ResponsesResponse = resp.json().await.context("Failed to parse Grok response")?;
+
+        if let Some(err) = resp.error {
+            anyhow::bail!(
+                "Grok API error: {}",
+                err.message.unwrap_or_else(|| "unknown".to_string())
+            );
+        }
+
+        // Extract text content from the output items
+        extract_text_from_output(&resp.output)
     }
+}
+
+/// Walk the output array and concatenate all text content from message items.
+fn extract_text_from_output(output: &[OutputItem]) -> Result<String> {
+    let mut text_parts: Vec<String> = Vec::new();
+
+    for item in output {
+        // Direct text field (some response formats)
+        if let Some(text) = &item.text {
+            text_parts.push(text.clone());
+        }
+
+        // Content blocks within message-type items
+        if let Some(content) = &item.content {
+            for block in content {
+                if (block.kind.as_deref() == Some("output_text") || block.kind.is_none())
+                    && block.text.is_some()
+                {
+                    text_parts.push(block.text.clone().unwrap());
+                }
+            }
+        }
+    }
+
+    if text_parts.is_empty() {
+        anyhow::bail!("No text content in Grok response");
+    }
+
+    Ok(text_parts.join(""))
 }
 
 // ── Phase 1: Generate search terms ──────────────────────────────────────────
@@ -191,7 +231,7 @@ Return ONLY a JSON array of strings. No markdown, no explanation. Example:
 ["term one", "term two", ...]"#
     );
 
-    let messages = vec![Message {
+    let messages = vec![InputMessage {
         role: "user".to_string(),
         content: prompt,
     }];
@@ -235,7 +275,7 @@ Return ONLY valid JSON (no markdown) matching this schema:
 }}"#
     );
 
-    let messages = vec![Message {
+    let messages = vec![InputMessage {
         role: "user".to_string(),
         content: prompt,
     }];
@@ -293,7 +333,7 @@ Return ONLY valid JSON (no markdown). Schema:
 }}"#
     );
 
-    let messages = vec![Message {
+    let messages = vec![InputMessage {
         role: "user".to_string(),
         content: prompt,
     }];
