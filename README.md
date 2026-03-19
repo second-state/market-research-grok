@@ -1,16 +1,16 @@
 # Market Research via Grok
 
-A Rust CLI that analyzes market demand for product ideas using real-time data from X (Twitter) and the web, powered by [Grok](https://x.ai).
+A Rust CLI that analyzes market demand for product ideas using real-time data from X (Twitter) and the web, powered by [Grok](https://x.ai). Generates an honest market assessment plus AI-created product concept images and videos.
 
-Instead of guessing whether your product idea has legs, this tool searches for what real people are actually saying — their frustrations, desires, complaints about competitors, and willingness to pay — then synthesizes it into an honest market assessment.
+Instead of guessing whether your product idea has legs, this tool searches for what real people are actually saying — their frustrations, desires, complaints about competitors, and willingness to pay — then synthesizes it into an honest market assessment with visual concept art.
 
 ## How It Works
 
 ```
-Product Idea → Grok generates search terms → Live X/web search → Sentiment extraction → Honest synthesis
+Product Idea → Search terms → Live X/web research → Honest synthesis → Product images → Animated videos
 ```
 
-**Three phases, one command:**
+**Six phases, one command:**
 
 1. **Term Generation** — Your product description is analyzed by Grok to produce 10-20 search queries covering features, competitors, user personas, pricing sensitivity, and pain points.
 
@@ -18,7 +18,13 @@ Product Idea → Grok generates search terms → Live X/web search → Sentiment
 
 3. **Synthesis** — All findings are fed back to Grok for a brutally honest final assessment: market need score (1-10), pain points solved and missed, competitive landscape, pricing feedback, risks, opportunities, and a frank "would you invest?" verdict.
 
-Every API call uses **Grok (grok-3)** with X search, web search, and news search enabled. Results reflect real-time conversations and sentiment.
+4. **Image Prompt Generation** — Grok creates 5 polished image concepts based on the product and synthesis: hero shot, user in context, pain point visualization, transformation scene, and aspirational outcome.
+
+5. **Image Generation** — Each concept is rendered via `grok-imagine-image-pro` ($0.07/image, highest quality).
+
+6. **Video Generation** — Each image is animated into a 5-second cinematic video via `grok-imagine-video` (16:9, 720p). Videos are generated asynchronously with polling.
+
+Every API call uses live search and the most advanced models available.
 
 ## Quick Start
 
@@ -26,9 +32,15 @@ Every API call uses **Grok (grok-3)** with X search, web search, and news search
 # Set your xAI API key
 export GROK_API_KEY="xai-your-key-here"
 
-# Run analysis
+# Full run with images and videos
 ./market_research \
   --product "A CLI tool for developers that auto-generates API docs from code comments. Supports Rust, Go, Python. Outputs OpenAPI. $19/mo for teams, free for OSS." \
+  --output report.json
+
+# Research only (skip expensive media generation)
+./market_research \
+  --product "Your product idea..." \
+  --skip-media \
   --output report.json
 ```
 
@@ -45,7 +57,7 @@ Download from [Releases](https://github.com/second-state/market-research-grok/re
 | Linux x86_64 | `market_research-v*-x86_64-unknown-linux-musl.tar.gz` | **Static** (musl) |
 | Linux ARM64 | `market_research-v*-aarch64-unknown-linux-musl.tar.gz` | **Static** (musl) |
 
-Linux binaries are fully statically linked — no glibc, no OpenSSL, no runtime dependencies. Drop the binary anywhere and run it.
+Linux binaries are fully statically linked — no glibc, no OpenSSL, no runtime dependencies.
 
 ```bash
 # Example: Linux x86_64
@@ -83,6 +95,7 @@ Options:
   -p, --product <PRODUCT>  Product description (features, users, pricing, use cases)
   -o, --output <OUTPUT>    Output file path (default: stdout)
       --terms <TERMS>      Number of search terms to generate, 10-20 [default: 15]
+      --skip-media         Skip image and video generation
   -h, --help               Print help
 ```
 
@@ -91,7 +104,7 @@ Options:
 The quality of your research depends on the input. Include:
 
 - **Features** — What does it do? What's the core differentiator?
-- **Target users** — Who specifically would use this? (developers, small business owners, students, etc.)
+- **Target users** — Who specifically would use this?
 - **Price points** — Free? Freemium? $X/mo? Enterprise?
 - **Use cases** — Concrete scenarios where someone would reach for this.
 
@@ -105,110 +118,106 @@ Price: $12/mo or $99/year. Use case: designer finishes a project,
 clicks one button, client gets a professional invoice with tracked hours.
 ```
 
-**Weak example:**
-```
-An invoicing app.
-```
-
 ### Adjusting Search Depth
 
 - `--terms 10` — Faster, cheaper, good for quick validation
 - `--terms 15` — Default, balanced coverage
 - `--terms 20` — Maximum depth, broader signal capture
 
-Each term generates one Grok API call, so more terms = more cost and time.
-
 ## Output Format
 
 ```json
 {
   "product_summary": "Your input description",
-  "search_terms": [
-    "freelance designer invoice automation",
-    "Figma time tracking invoice",
-    "Toggl invoice integration complaints",
-    "..."
-  ],
+  "search_terms": ["term1", "term2", "..."],
   "findings": [
     {
       "term": "freelance designer invoice automation",
-      "positive_signals": [
-        "Many freelancers on X express frustration with manual invoicing",
-        "Strong desire for tools that connect design work to billing"
-      ],
-      "negative_signals": [
-        "Some prefer all-in-one platforms over point solutions",
-        "Price sensitivity — many freelancers expect free tools"
-      ],
-      "notable_quotes": [
-        "@designer: 'I spend 2 hours every Friday doing invoices instead of designing'",
-        "@studio_owner: 'We tried 4 different invoicing tools, none talk to Figma'"
-      ],
+      "positive_signals": ["Many freelancers express frustration with manual invoicing"],
+      "negative_signals": ["Some prefer all-in-one platforms over point solutions"],
+      "notable_quotes": ["@designer: 'I spend 2 hours every Friday doing invoices'"],
       "sentiment": "positive"
     }
   ],
   "synthesis": {
     "market_need_score": 7,
-    "market_need_description": "There is genuine frustration among freelance designers about the disconnect between time tracking and invoicing. The pain is real but the market has several incumbents.",
-    "pain_points_solved": [
-      "Manual time-to-invoice conversion",
-      "Multi-tool workflow friction"
-    ],
-    "pain_points_missed": [
-      "Contract/proposal generation",
-      "Client communication and follow-ups"
-    ],
-    "competitive_landscape": "Crowded. FreshBooks, Harvest, and Wave all serve this space. Figma-specific integration is a differentiator but narrow.",
-    "pricing_feedback": "Solo freelancers resist $12/mo for invoicing alone. Bundling with time tracking would increase perceived value.",
-    "target_audience_fit": "Good fit for design studios. Solo freelancers may churn — they want free or very cheap.",
-    "risks": [
-      "Figma could build native invoicing",
-      "Low switching costs — easy to leave for a cheaper alternative"
-    ],
-    "opportunities": [
-      "No one owns the Figma→invoice pipeline yet",
-      "Design agencies (5-20 people) are underserved and less price-sensitive"
-    ],
-    "honest_assessment": "The pain point is real but the moat is thin. Figma integration is clever but defensible only until Figma or a larger player copies it. I'd validate with 50 paying design studios before building beyond MVP. The solo freelancer market is a trap — high churn, low willingness to pay."
-  }
+    "market_need_description": "Genuine frustration among freelance designers...",
+    "pain_points_solved": ["Manual time-to-invoice conversion"],
+    "pain_points_missed": ["Contract/proposal generation"],
+    "competitive_landscape": "Crowded. FreshBooks, Harvest, Wave...",
+    "pricing_feedback": "Solo freelancers resist $12/mo for invoicing alone.",
+    "target_audience_fit": "Good fit for design studios.",
+    "risks": ["Figma could build native invoicing"],
+    "opportunities": ["No one owns the Figma→invoice pipeline yet"],
+    "honest_assessment": "The pain point is real but the moat is thin..."
+  },
+  "media": [
+    {
+      "description": "Hero product shot showing the app dashboard",
+      "image_prompt": "Photorealistic screenshot of a modern invoicing app...",
+      "image_url": "https://...",
+      "video_prompt": "Slow zoom into the dashboard with subtle UI animations...",
+      "video_url": "https://..."
+    }
+  ]
 }
 ```
+
+The `media` array contains 5 entries (omitted when `--skip-media` is used). Each has:
+- **description** — Human-readable concept summary
+- **image_prompt** / **video_prompt** — The prompts used for generation
+- **image_url** — Temporary URL to the generated image (download promptly)
+- **video_url** — Temporary URL to the 5-second video (download promptly)
+
+> ⚠️ Image and video URLs are temporary. Download them immediately after generation.
 
 ## Architecture
 
 ```
-src/main.rs          Single-file Rust binary (~300 lines)
+src/main.rs          Single-file Rust binary (~500 lines)
 ├── CLI parsing      clap with derive macros
 ├── Grok client      reqwest + rustls (zero OpenSSL)
+│   ├── chat()             Responses API with web_search + x_search
+│   ├── generate_image()   Image generation API
+│   └── generate_video()   Video generation API with async polling
 ├── Phase 1          Term generation via structured prompts
 ├── Phase 2          Per-term live search + sentiment extraction
 ├── Phase 3          Synthesis with enforced honesty
+├── Phase 4          Image prompt generation from product + synthesis
+├── Phase 5          Image rendering via grok-imagine-image-pro
+├── Phase 6          Video generation from images via grok-imagine-video
 └── JSON output      serde_json pretty-print
 ```
 
 **Key design decisions:**
 
-- **Single binary, zero runtime deps** — No Python, no Node, no Docker. Download and run.
-- **rustls, not OpenSSL** — Pure Rust TLS. Static linking works on Linux (musl) without fighting OpenSSL cross-compilation.
-- **Sequential API calls** — Intentionally not parallelized. Grok rate limits are per-key, and sequential calls produce more reliable results with search enabled.
-- **Honest-by-design prompts** — The synthesis prompt explicitly asks for unvarnished assessment and penalizes cheerleading. This is a feature, not a bug.
+- **Single binary, zero runtime deps** — No Python, no Node, no Docker.
+- **rustls, not OpenSSL** — Pure Rust TLS. Static musl builds on Linux.
+- **Sequential API calls** — Intentionally not parallelized for rate limit safety.
+- **Honest-by-design prompts** — Synthesis explicitly penalizes cheerleading.
+- **Image-to-video pipeline** — Each video is animated from its corresponding image for visual consistency.
 
 ## API Details
 
-All calls go to `https://api.x.ai/v1/responses` (the Responses API) with:
-
-- **Model:** `grok-3`
-- **Tools:** `[{"type": "web_search"}, {"type": "x_search"}]` — live search on every call
-- **Temperature:** 0.7 for term generation (creative), 0.3 for research and synthesis (precise)
+| Endpoint | Model | Purpose |
+|----------|-------|---------|
+| `POST /v1/responses` | `grok-4-0709` | Research + synthesis (with web_search + x_search tools) |
+| `POST /v1/images/generations` | `grok-imagine-image-pro` | Product concept images ($0.07/image) |
+| `POST /v1/videos/generations` | `grok-imagine-video` | 5-sec animated videos from images ($0.05/sec) |
+| `GET /v1/videos/{request_id}` | — | Poll video generation status |
 
 ## Cost Estimation
 
-Each run makes `2 + N` API calls where N = number of search terms:
-- 1 call for term generation
-- N calls for research (one per term)
-- 1 call for synthesis
+**Research only** (`--skip-media`): `2 + N` API calls where N = number of search terms.
+With `--terms 15`, that's 17 Grok API calls.
 
-With `--terms 15` (default), that's 17 Grok API calls. Check [xAI pricing](https://x.ai/pricing) for current rates.
+**Full run** (with media): adds 1 prompt generation call + 5 image generations + 5 video generations.
+- Research: ~17 × grok-4-0709 calls
+- Images: 5 × $0.07 = $0.35
+- Videos: 5 × 5sec × $0.05/sec = $1.25
+- **Total media cost: ~$1.60 per run**
+
+Check [xAI pricing](https://x.ai/pricing) for current rates.
 
 ## Testing
 
@@ -216,20 +225,21 @@ With `--terms 15` (default), that's 17 Grok API calls. Check [xAI pricing](https
 # Unit tests (no API key needed)
 cargo test -- --skip live_api
 
-# Full test suite (requires GROK_API_KEY)
-export GROK_API_KEY="xai-..."
-cargo test --release -- --nocapture
+# Research test only (needs GROK_API_KEY)
+GROK_API_KEY="..." cargo test --release -- live_api_generates_report --nocapture
+
+# Full test with media (expensive, ~10 min)
+GROK_API_KEY="..." cargo test --release -- live_api_generates_media --nocapture
 ```
 
-CI runs both — unit tests always, live API tests when `GROK_API_KEY` is available as a repo secret.
+CI runs lint/build on every push. Live API tests (research + media) only run on merges to main. Doc-only changes skip CI entirely.
 
 ## Contributing
 
 1. Fork the repo
 2. Create a feature branch
-3. Make changes — keep it simple, it's a single-file binary for a reason
-4. Run `cargo fmt && cargo clippy -- -D warnings && cargo test`
-5. Open a PR
+3. Run `cargo fmt && cargo clippy -- -D warnings && cargo test -- --skip live_api`
+4. Open a PR
 
 ## License
 
