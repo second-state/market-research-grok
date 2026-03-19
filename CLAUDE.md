@@ -59,6 +59,22 @@ cargo fmt -- --check
 cargo clippy -- -D warnings
 ```
 
+### ⚠️ Pre-Commit Checklist (MANDATORY)
+
+**Before every commit, run all three and fix any issues:**
+
+```bash
+cargo fmt
+cargo clippy -- -D warnings
+cargo test -- --skip live_api
+```
+
+Do NOT commit if any of these fail. CI will reject it. Common gotchas:
+
+- **`cargo fmt`** — Always run it, not just `--check`. The CI runner's formatting may differ from your local defaults.
+- **`cargo clippy`** — Treats all warnings as errors (`-D warnings`). Fix them, don't suppress with `#[allow]` unless there's a good reason.
+- **Test assertions** — The binary name is `market_research` (underscore), not `market-research` (hyphen). The repo/skill name uses hyphens, the Cargo binary uses underscores. Don't mix them up in assertions or docs.
+
 ## CI/CD
 
 ### CI (`ci.yml`)

@@ -309,11 +309,8 @@ Return ONLY valid JSON (no markdown). Schema:
 // ── JSON extraction helpers ─────────────────────────────────────────────────
 
 fn extract_json_array(raw: &str) -> Result<String> {
-    // Try to find a JSON array in the response
-    if let Some(start) = raw.find('[') {
-        if let Some(end) = raw.rfind(']') {
-            return Ok(raw[start..=end].to_string());
-        }
+    if let (Some(start), Some(end)) = (raw.find('['), raw.rfind(']')) {
+        return Ok(raw[start..=end].to_string());
     }
     anyhow::bail!(
         "No JSON array found in response: {}",
@@ -322,10 +319,8 @@ fn extract_json_array(raw: &str) -> Result<String> {
 }
 
 fn extract_json_object(raw: &str) -> Result<String> {
-    if let Some(start) = raw.find('{') {
-        if let Some(end) = raw.rfind('}') {
-            return Ok(raw[start..=end].to_string());
-        }
+    if let (Some(start), Some(end)) = (raw.find('{'), raw.rfind('}')) {
+        return Ok(raw[start..=end].to_string());
     }
     anyhow::bail!(
         "No JSON object found in response: {}",
