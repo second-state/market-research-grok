@@ -43,7 +43,11 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Unit tests
         run: cargo test --release -- --skip live_api
-      - name: Integration test (live API)
+      - name: Integration test (research, no media)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main' && env.GROK_API_KEY != ''
         timeout-minutes: 10
-        run: cargo test --release -- live_api --nocapture
+        run: cargo test --release -- live_api_generates_report --nocapture
+      - name: Integration test (media generation)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && env.GROK_API_KEY != ''
+        timeout-minutes: 20
+        run: cargo test --release -- live_api_generates_media --nocapture
